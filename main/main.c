@@ -37,6 +37,7 @@ void app_main(void)
      setup_ulp();
 
     //Setup membrane 
+    
     rtc_gpio_init(Membrane_button);
     rtc_gpio_set_direction(Membrane_button, RTC_GPIO_MODE_INPUT_ONLY);
     rtc_gpio_set_direction_in_sleep(Membrane_button, RTC_GPIO_MODE_INPUT_ONLY);
@@ -44,8 +45,28 @@ void app_main(void)
     rtc_gpio_pullup_en(Membrane_button);
     rtc_gpio_hold_en(Membrane_button);
     // const int ext_wakeup_pin_1  = 18;
-    // const uint64_t ext_wakeup_pin_1_mask  = 1ULL << ext_wakeup_pin_1;
-    // esp_sleep_enable_ext1_wakeup(ext_wakeup_pin_1_mask , 1);
+    // const uint64_t ext_wakeup_pin_1_mask  = 1ULL << ext_wakeup_pin_1; //This code has different results as using Membrane_button in the below codes but still fails in similar manners
+
+/*
+Interrupt works but Co-processor crashes with LED is running in ULP
+When you comment out all the code in the ULP processor this function works as expected.
+This aligns with the note here https://docs.espressif.com/projects/esp-idf/en/latest/esp32s2/api-reference/system/sleep_modes.html#_CPPv428esp_sleep_enable_ext0_wakeup10gpio_num_ti
+"In revisions 0 and 1 of the ESP32, ext0 wakeup source can not be used together with touch or ULP wakeup sources."
+*/
+
+    // esp_sleep_enable_ext0_wakeup(Membrane_button,1); //uncomment to test
+
+/*
+
+When this function is set to 0: esp_sleep_enable_ext1_wakeup(Membrane_button,0);
+The processor constantly wakes up by ESP_SLEEP_WAKEUP_EXT1 and the blink occurs every time the processor returns to sleep
+
+When this function is set to 1: esp_sleep_enable_ext1_wakeup(Membrane_button,0);
+The co-processor blinks the LED however no button press interrupt is recognised...
+*/
+
+    // esp_sleep_enable_ext1_wakeup(Membrane_button,0); 
+
     printf("Entering in deep sleep and uploaded by flash\n\n");
     vTaskDelay(25);
     ESP_ERROR_CHECK( esp_sleep_enable_ulp_wakeup()); 
@@ -78,9 +99,17 @@ void setup_ulp(){
     if (cause == ESP_SLEEP_WAKEUP_ULP) {
         printf("Woke-up intentionally by ULP  \n");
     }
-        if (cause == ESP_SLEEP_WAKEUP_EXT1) {
-        printf("Woke-up intentionally by EXT1\n");
+    if (cause == ESP_SLEEP_WAKEUP_EXT0) {
+        printf("Woke-up intentionally by EXT0\n");
+     }   
         
+    if (cause == ESP_SLEEP_WAKEUP_EXT1) {
+        printf("Woke-up intentionally by EXT0\n");
+        uint64_t mask = esp_sleep_get_ext1_wakeup_status();
+        printf("mask/GPIO is : %lld \n", mask);    
+    }
+    if (cause == ESP_SLEEP_WAKEUP_GPIO) {
+        printf("Woke-up intentionally by ESP_SLEEP_WAKEUP_GPIO\n");
     }
     init_ulp_program();
 

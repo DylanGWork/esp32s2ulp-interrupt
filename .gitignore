@@ -1,6 +1,8 @@
 # Prerequisites
 *.d
 build/*
+.vscode/*
+.devcontainer/*
 # Object files
 *.o
 *.ko
