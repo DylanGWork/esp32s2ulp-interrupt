@@ -1,8 +1,7 @@
 # Prerequisites
 *.d
 build/*
-.vscode/*
-.devcontainer/*
+
 # Object files
 *.o
 *.ko
@@ -54,3 +53,5 @@ Mkfile.old
 dkms.conf
 sdkconfig
 sdkconfig.old
+/.devcontainer
+/.vscode
