@@ -1,14 +1,15 @@
 | Supported Targets | ESP32-S2 |
 | ----------------- | -------- |
 
-# PestSense Rodent Station
+# DylanGWork
 
-This is the repository of the firmware ofr the PestSense Rodent Station.
+This is the repository of the firmware for the ESP32-S2 interrupt while using the ULP Risc-v Co-processor.
 
-The sensors used in this device are:
-Load cells
-KXTJ3 Accellerometer
-Infra-red and Phototransistors as a beam break entry detection
-Push button
-LED's for state transition recognition
-LoRaWAN using ttn-esp32 by ManualB with minor edits
+This code blinks an LED every 2 seconds using the Risc-v Co-processor.
+A button interrupt is setup in the main processor (waiting for ULP interrupts to be easily available in the esp-idf framework, it's in the technical reference guide but with no implementation instructions).
+
+When the interrupt is active, the LED's no longer blink.
+
+How do we allow for EXT1 to be used while the Risc-v Co-processor is operating?
+
+
