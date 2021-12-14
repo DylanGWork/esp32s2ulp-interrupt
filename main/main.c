@@ -22,6 +22,12 @@
 #include "esp_sleep.h"
 #include "stdbool.h"
 
+
+// #include "driver/riscv_system.h"
+// #include "driver/riscv_touchpad.h"
+// #include "driver/riscv_rtc_io.h"
+// #include "driver/riscv_adc.h"
+
 #include "ulp_main.h"
 
 extern const uint8_t ulp_main_bin_start[] asm("_binary_ulp_main_bin_start");
@@ -47,6 +53,19 @@ void app_main(void)
     // const int ext_wakeup_pin_1  = 18;
     // const uint64_t ext_wakeup_pin_1_mask  = 1ULL << ext_wakeup_pin_1; //This code has different results as using Membrane_button in the below codes but still fails in similar manners
 
+    //1. The main CPU initializes touch. Starts riscv.
+    //2. RISC-V sets touch sleep threshold. Enable touch interrupt.
+    //3. riscv detects whether an interrupt is generated (uses the IO status as a flag / sends an interrupt signal to the main CPU).
+
+    // void testcase_rtcio_intr()
+    // {
+    //     int cnt = 0;
+    //     // Set the touch threshold under sleep, the CPU has already been set.
+    //     riscv_intr_enable(RISCV_INT_TOUCH_ACTIVE | RISCV_INT_TOUCH_INACTIVE);
+    //     sys_riscv_send_intr_to_cpu();
+    //     while(1) {int x = 10; int y = 1000; x = x*y;}
+    // }
+
 /*
 Interrupt works but Co-processor crashes with LED is running in ULP
 When you comment out all the code in the ULP processor this function works as expected.
@@ -54,7 +73,7 @@ This aligns with the note here https://docs.espressif.com/projects/esp-idf/en/la
 "In revisions 0 and 1 of the ESP32, ext0 wakeup source can not be used together with touch or ULP wakeup sources."
 */
 
-    // esp_sleep_enable_ext0_wakeup(Membrane_button,1); //uncomment to test
+    // esp_sleep_enable_ext0_wakeup(Membrane_button,0); //uncomment to test
 
 /*
 
@@ -65,13 +84,14 @@ When this function is set to 1: esp_sleep_enable_ext1_wakeup(Membrane_button,0);
 The co-processor blinks the LED however no button press interrupt is recognised...
 */
 
-    // esp_sleep_enable_ext1_wakeup(Membrane_button,0); 
-
+    ESP_ERROR_CHECK(esp_sleep_enable_ext1_wakeup(Membrane_button,1)); 
+    // rtc_gpio_isolate(GPIO_NUM_0);
+    
     printf("Entering in deep sleep and uploaded by flash\n\n");
     vTaskDelay(25);
     ESP_ERROR_CHECK( esp_sleep_enable_ulp_wakeup()); 
     esp_deep_sleep_start();
-}
+    }
 
 static void init_ulp_program(void)
 {

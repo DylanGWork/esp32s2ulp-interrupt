@@ -59,6 +59,12 @@ static inline void example_ulp_gpio_init(gpio_num_t gpio_num)
     REG_SET_FIELD(RTC_IO_TOUCH_PAD0_REG + gpio_num*4, RTC_IO_TOUCH_PAD0_FUN_SEL, 0);
 }
 
+// static inline void interrupt_setup(gpio_num_t gpio_num, int level)
+// {
+//     SET_PERI_REG_MASK(RTCIO_RTC_GPIO_PIN + gpio_num*4, RTC_IO_TOUCH_PAD0_MUX_SEL);
+// } 
+
+
 static inline void example_ulp_gpio_deinit(gpio_num_t gpio_num)
 {
     CLEAR_PERI_REG_MASK(RTC_IO_TOUCH_PAD0_REG + gpio_num*4, RTC_IO_TOUCH_PAD0_MUX_SEL);
