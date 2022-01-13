@@ -21,7 +21,7 @@ typedef struct {
     uint64_t sleep_duration;
     uint32_t wakeup_triggers : 15;
     uint32_t ext1_trigger_mode : 1;
-    uint32_t ext1_rtc_gpio_mask : 17;
+    **uint32_t ext1_rtc_gpio_mask : 17;**
     uint32_t ext0_trigger_level : 1;
     uint32_t ext0_rtc_gpio_num : 5;
     uint32_t gpio_wakeup_mask : 6;
@@ -39,7 +39,7 @@ typedef struct {
     uint64_t sleep_duration;
     uint32_t wakeup_triggers : 15;
     uint32_t ext1_trigger_mode : 1;
-    uint32_t ext1_rtc_gpio_mask : 22;
+    **uint32_t ext1_rtc_gpio_mask : 22;**
     uint32_t ext0_trigger_level : 1;
     uint32_t ext0_rtc_gpio_num : 5;
     uint32_t gpio_wakeup_mask : 6;
