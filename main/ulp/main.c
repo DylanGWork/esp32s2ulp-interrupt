@@ -26,7 +26,7 @@ extern void wait(int);
 
 int main (void)
 {
-    
+    // interrupt_setup(18); //WIP
     // //Blink an LED every time the ULP co-processor wakes up
     example_ulp_gpio_init(Membrane_LED_Yellow);
     example_ulp_gpio_output_enable(Membrane_LED_Yellow);

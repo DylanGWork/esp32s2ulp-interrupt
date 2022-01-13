@@ -50,21 +50,12 @@ void app_main(void)
     rtc_gpio_pulldown_dis(Membrane_button);
     rtc_gpio_pullup_en(Membrane_button);
     rtc_gpio_hold_en(Membrane_button);
-    // const int ext_wakeup_pin_1  = 18;
-    // const uint64_t ext_wakeup_pin_1_mask  = 1ULL << ext_wakeup_pin_1; //This code has different results as using Membrane_button in the below codes but still fails in similar manners
-
+    const int ext_wakeup_pin_1  = 18;
+    const uint64_t ext_wakeup_pin_1_mask  = 1ULL << ext_wakeup_pin_1; //This code has different results as using Membrane_button in the below codes but still fails in similar manners
+    esp_sleep_enable_ext1_wakeup(ext_wakeup_pin_1_mask,0); 
     //1. The main CPU initializes touch. Starts riscv.
     //2. RISC-V sets touch sleep threshold. Enable touch interrupt.
     //3. riscv detects whether an interrupt is generated (uses the IO status as a flag / sends an interrupt signal to the main CPU).
-
-    // void testcase_rtcio_intr()
-    // {
-    //     int cnt = 0;
-    //     // Set the touch threshold under sleep, the CPU has already been set.
-    //     riscv_intr_enable(RISCV_INT_TOUCH_ACTIVE | RISCV_INT_TOUCH_INACTIVE);
-    //     sys_riscv_send_intr_to_cpu();
-    //     while(1) {int x = 10; int y = 1000; x = x*y;}
-    // }
 
 /*
 Interrupt works but Co-processor crashes with LED is running in ULP
@@ -84,7 +75,7 @@ When this function is set to 1: esp_sleep_enable_ext1_wakeup(Membrane_button,0);
 The co-processor blinks the LED however no button press interrupt is recognised...
 */
 
-    ESP_ERROR_CHECK(esp_sleep_enable_ext1_wakeup(Membrane_button,1)); 
+    
     // rtc_gpio_isolate(GPIO_NUM_0);
     
     printf("Entering in deep sleep and uploaded by flash\n\n");
