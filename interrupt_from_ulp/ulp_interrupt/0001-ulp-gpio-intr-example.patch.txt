@@ -1,0 +1,226 @@
+From 4c950e907f29f83177331b18af6abd2a47fdc1ad Mon Sep 17 00:00:00 2001
+From: Marius Vikhammer <marius.vikhammer@espressif.com>
+Date: Thu, 20 Jan 2022 12:04:40 +0800
+Subject: [PATCH] ulp: gpio intr example
+
+---
+ components/ulp/ulp_riscv.c                    |  2 +-
+ .../system/ulp_riscv/gpio_intr/CMakeLists.txt | 12 +++
+ .../ulp_riscv/gpio_intr/main/CMakeLists.txt   | 27 ++++++
+ .../ulp_riscv/gpio_intr/main/ulp/main.c       | 26 ++++++
+ .../gpio_intr/main/ulp_riscv_example_main.c   | 86 +++++++++++++++++++
+ .../ulp_riscv/gpio_intr/sdkconfig.defaults    | 10 +++
+ 6 files changed, 162 insertions(+), 1 deletion(-)
+ create mode 100644 examples/system/ulp_riscv/gpio_intr/CMakeLists.txt
+ create mode 100644 examples/system/ulp_riscv/gpio_intr/main/CMakeLists.txt
+ create mode 100644 examples/system/ulp_riscv/gpio_intr/main/ulp/main.c
+ create mode 100644 examples/system/ulp_riscv/gpio_intr/main/ulp_riscv_example_main.c
+ create mode 100644 examples/system/ulp_riscv/gpio_intr/sdkconfig.defaults
+
+diff --git a/components/ulp/ulp_riscv.c b/components/ulp/ulp_riscv.c
+index 3591b66c80..5e548206d6 100644
+--- a/components/ulp/ulp_riscv.c
++++ b/components/ulp/ulp_riscv.c
+@@ -50,7 +50,7 @@ esp_err_t ulp_riscv_run(void)
+ 
+     /* start ULP_TIMER */
+     CLEAR_PERI_REG_MASK(RTC_CNTL_ULP_CP_CTRL_REG, RTC_CNTL_ULP_CP_FORCE_START_TOP);
+-    SET_PERI_REG_MASK(RTC_CNTL_ULP_CP_TIMER_REG, RTC_CNTL_ULP_CP_SLP_TIMER_EN);
++    SET_PERI_REG_MASK(RTC_CNTL_ULP_CP_TIMER_REG, RTC_CNTL_ULP_CP_GPIO_WAKEUP_ENA);
+ 
+     return ESP_OK;
+ #elif CONFIG_IDF_TARGET_ESP32S3
+diff --git a/examples/system/ulp_riscv/gpio_intr/CMakeLists.txt b/examples/system/ulp_riscv/gpio_intr/CMakeLists.txt
+new file mode 100644
+index 0000000000..6207a44ed8
+--- /dev/null
++++ b/examples/system/ulp_riscv/gpio_intr/CMakeLists.txt
+@@ -0,0 +1,12 @@
++# The following lines of boilerplate have to be in your project's CMakeLists
++# in this exact order for cmake to work correctly
++cmake_minimum_required(VERSION 3.5)
++
++if(NOT IDF_TARGET STREQUAL "esp32s2")
++    #IDF-4514
++    message(FATAL_ERROR "DO NOT BUILD THIS APP FOR ANY TARGET OTHER THAN ESP32-S2 OTHERWISE YOU MAY BRICK YOUR DEVICE")
++    return()
++endif()
++
++include($ENV{IDF_PATH}/tools/cmake/project.cmake)
++project(ulp_riscv_example)
+diff --git a/examples/system/ulp_riscv/gpio_intr/main/CMakeLists.txt b/examples/system/ulp_riscv/gpio_intr/main/CMakeLists.txt
+new file mode 100644
+index 0000000000..0bf0513382
+--- /dev/null
++++ b/examples/system/ulp_riscv/gpio_intr/main/CMakeLists.txt
+@@ -0,0 +1,27 @@
++# Set usual component variables
++set(COMPONENT_SRCS "ulp_riscv_example_main.c")
++set(COMPONENT_ADD_INCLUDEDIRS "")
++set(COMPONENT_REQUIRES soc nvs_flash ulp driver)
++
++register_component()
++
++#
++# ULP support additions to component CMakeLists.txt.
++#
++# 1. The ULP app name must be unique (if multiple components use ULP).
++set(ulp_app_name ulp_${COMPONENT_NAME})
++#
++# 2. Specify all C and Assembly source files.
++#    Files should be placed into a separate directory (in this case, ulp/),
++#    which should not be added to COMPONENT_SRCS.
++set(ulp_riscv_sources "ulp/main.c")
++
++#
++# 3. List all the component source files which include automatically
++#    generated ULP export file, ${ulp_app_name}.h:
++set(ulp_exp_dep_srcs "ulp_riscv_example_main.c")
++
++#
++# 4. Call function to build ULP binary and embed in project using the argument
++#    values above.
++ulp_embed_binary(${ulp_app_name} "${ulp_riscv_sources}" "${ulp_exp_dep_srcs}")
+diff --git a/examples/system/ulp_riscv/gpio_intr/main/ulp/main.c b/examples/system/ulp_riscv/gpio_intr/main/ulp/main.c
+new file mode 100644
+index 0000000000..52986f3a54
+--- /dev/null
++++ b/examples/system/ulp_riscv/gpio_intr/main/ulp/main.c
+@@ -0,0 +1,26 @@
++/* ULP-RISC-V example
++
++   This example code is in the Public Domain (or CC0 licensed, at your option.)
++
++   Unless required by applicable law or agreed to in writing, this
++   software is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
++   CONDITIONS OF ANY KIND, either express or implied.
++
++   This code runs on ULP-RISC-V  coprocessor
++*/
++
++#include <stdio.h>
++#include <stdint.h>
++#include <stdbool.h>
++#include "ulp_riscv/ulp_riscv.h"
++#include "ulp_riscv/ulp_riscv_utils.h"
++#include "ulp_riscv/ulp_riscv_gpio.h"
++
++volatile int cnt = 0;
++
++int main (void)
++{
++    ulp_riscv_wakeup_main_processor();
++    /* ulp_riscv_halt() is called automatically when main exits */
++    return 0;
++}
+diff --git a/examples/system/ulp_riscv/gpio_intr/main/ulp_riscv_example_main.c b/examples/system/ulp_riscv/gpio_intr/main/ulp_riscv_example_main.c
+new file mode 100644
+index 0000000000..7b06d71030
+--- /dev/null
++++ b/examples/system/ulp_riscv/gpio_intr/main/ulp_riscv_example_main.c
+@@ -0,0 +1,86 @@
++/* ULP riscv DS18B20 1wire temperature sensor example
++
++   This example code is in the Public Domain (or CC0 licensed, at your option.)
++
++   Unless required by applicable law or agreed to in writing, this
++   software is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
++   CONDITIONS OF ANY KIND, either express or implied.
++*/
++
++#include <stdio.h>
++#include "esp_sleep.h"
++#include "soc/rtc_cntl_reg.h"
++#include "soc/sens_reg.h"
++#include "soc/rtc_periph.h"
++#include "driver/gpio.h"
++#include "driver/rtc_io.h"
++#include "esp32s2/ulp.h"
++#include "esp32s2/ulp_riscv.h"
++#include "ulp_main.h"
++#include "freertos/FreeRTOS.h"
++#include "freertos/task.h"
++#include "hal/rtc_io_hal.h"
++
++extern const uint8_t ulp_main_bin_start[] asm("_binary_ulp_main_bin_start");
++extern const uint8_t ulp_main_bin_end[]   asm("_binary_ulp_main_bin_end");
++
++static void init_ulp_program(void);
++
++static void wakeup_gpio_init()
++{
++    /* Configure the button GPIO as input, enable wakeup */
++    const int button_gpio_num = 8;
++    const int wakeup_level = 1;
++    gpio_config_t config = {
++            .pin_bit_mask = BIT64(button_gpio_num),
++            .mode = GPIO_MODE_INPUT
++    };
++    ESP_ERROR_CHECK(gpio_config(&config));
++    gpio_wakeup_enable(button_gpio_num,
++            wakeup_level == 0 ? GPIO_INTR_LOW_LEVEL : GPIO_INTR_HIGH_LEVEL);
++
++    rtcio_hal_hold_enable(button_gpio_num);
++}
++
++void app_main(void)
++{
++
++    wakeup_gpio_init();
++
++    esp_sleep_wakeup_cause_t cause = esp_sleep_get_wakeup_cause();
++    /* not a wakeup from ULP, load the firmware */
++    if (cause != ESP_SLEEP_WAKEUP_ULP) {
++        printf("Not a ULP-RISC-V wakeup, initializing it! \n");
++        init_ulp_program();
++    }
++
++    if (cause == ESP_SLEEP_WAKEUP_ULP) {
++        printf("ULP-RISC-V woke up the main CPU! \n");
++    }
++
++    /* Go back to sleep, only the ULP Risc-V will run */
++    printf("Entering in deep sleep\n\n");
++
++    /* Small delay to ensure the messages are printed */
++    vTaskDelay(100);
++
++    esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_ON);
++
++    ESP_ERROR_CHECK( esp_sleep_enable_ulp_wakeup());
++    esp_deep_sleep_start();
++}
++
++static void init_ulp_program(void)
++{
++    esp_err_t err = ulp_riscv_load_binary(ulp_main_bin_start, (ulp_main_bin_end - ulp_main_bin_start));
++    ESP_ERROR_CHECK(err);
++
++    /* The first argument is the period index, which is not used by the ULP-RISC-V timer
++     * The second argument is the period in microseconds, which gives a wakeup time period of: 20ms
++     */
++    ulp_set_wakeup_period(0, 20000);
++
++    /* Start the program */
++    err = ulp_riscv_run();
++    ESP_ERROR_CHECK(err);
++}
+diff --git a/examples/system/ulp_riscv/gpio_intr/sdkconfig.defaults b/examples/system/ulp_riscv/gpio_intr/sdkconfig.defaults
+new file mode 100644
+index 0000000000..1a3d12b265
+--- /dev/null
++++ b/examples/system/ulp_riscv/gpio_intr/sdkconfig.defaults
+@@ -0,0 +1,10 @@
++CONFIG_IDF_TARGET="esp32s2"
++# Enable ULP
++CONFIG_ESP32S2_ULP_COPROC_ENABLED=y
++CONFIG_ESP32S2_ULP_COPROC_RISCV=y
++CONFIG_ESP32S2_ULP_COPROC_RESERVE_MEM=4096
++# Set log level to Warning to produce clean output
++CONFIG_BOOTLOADER_LOG_LEVEL_WARN=y
++CONFIG_BOOTLOADER_LOG_LEVEL=2
++CONFIG_LOG_DEFAULT_LEVEL_WARN=y
++CONFIG_LOG_DEFAULT_LEVEL=2
+-- 
+2.25.1
+
